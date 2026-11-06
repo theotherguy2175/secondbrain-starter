@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brain</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a63; --line: #e3e1d8;
+    --accent: #2f5d50; --accent-ink: #ffffff; --mark: #ffe9a8; --bad: #b3261e; --ok: #2f7d4f;
+    --chip: #eeece4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #141513; --panel: #1c1d1a; --ink: #ecebe5; --muted: #9a998f; --line: #2d2e29;
+      --accent: #7fbfa8; --accent-ink: #10201a; --mark: #5a4a12; --bad: #f2a29b; --ok: #7fcf9f; --chip: #272823; }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line);
+    background: var(--panel); position: sticky; top: 0; z-index: 2; }
+  header h1 { font-size: 16px; margin: 0; letter-spacing: .02em; }
+  .spacer { flex: 1; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { border: 1px solid var(--line); background: var(--panel); padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+  button:hover { border-color: var(--muted); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.danger { color: var(--bad); }
+  input, select, textarea { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 8px 10px; width: 100%; }
+  input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 3px 9px; border-radius: 99px;
+    background: var(--chip); color: var(--muted); border: 1px solid var(--line); cursor: pointer; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .dot.ok { background: var(--ok); } .dot.bad { background: var(--bad); }
+  main { display: grid; grid-template-columns: minmax(280px, 380px) 1fr; height: calc(100% - 53px); }
+  aside { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+  .search { padding: 12px; border-bottom: 1px solid var(--line); }
+  .filters { display: flex; gap: 6px; margin-top: 8px; }
+  .filters select { padding: 5px 8px; font-size: 13px; }
+  #list { overflow: auto; flex: 1; }
+  .row { padding: 11px 14px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .row:hover { background: var(--chip); }
+  .row.sel { background: var(--chip); box-shadow: inset 3px 0 0 var(--accent); }
+  .row .t { font-weight: 600; }
+  .row .s { color: var(--muted); font-size: 13px; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical; overflow: hidden; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; font-size: 12px; color: var(--muted); }
+  .chip { background: var(--chip); border-radius: 6px; padding: 1px 7px; }
+  mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1px; }
+  section.detail { overflow: auto; padding: 22px 28px 60px; min-width: 0; }
+  .detail .bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .detail h2 { margin: 0 0 4px; font-size: 22px; line-height: 1.25; }
+  pre.body { white-space: pre-wrap; word-wrap: break-word; font: 14px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .md { font: 15px/1.65 -apple-system, system-ui, sans-serif; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 22px 16px; overflow-wrap: anywhere; }
+  .md h1, .md h2, .md h3, .md h4 { line-height: 1.25; margin: 1.3em 0 .4em; }
+  .md h1 { font-size: 1.5em; } .md h2 { font-size: 1.25em; border-bottom: 1px solid var(--line); padding-bottom: 4px; } .md h3 { font-size: 1.08em; }
+  .md p { margin: .6em 0; } .md ul, .md ol { padding-left: 1.5em; margin: .5em 0; } .md li { margin: .2em 0; }
+  .md code { font: 13px ui-monospace, Menlo, monospace; background: var(--chip); border-radius: 5px; padding: 1px 5px; }
+  .md pre { background: var(--chip); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow: auto; margin: .8em 0; }
+  .md pre code { background: none; padding: 0; white-space: pre; }
+  .md blockquote { margin: .7em 0; padding: 2px 14px; border-left: 3px solid var(--accent); color: var(--muted); }
+  .md table { border-collapse: collapse; margin: .8em 0; display: block; overflow: auto; }
+  .md th, .md td { border: 1px solid var(--line); padding: 5px 10px; text-align: left; } .md th { background: var(--chip); }
+  .md hr { border: 0; border-top: 1px solid var(--line); margin: 1.2em 0; }
+  .md a { color: var(--accent); }
+  .block { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-top: 12px; }
+  .block h3 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .block pre { margin: 0; white-space: pre-wrap; font: 13px/1.5 ui-monospace, Menlo, monospace; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 10px 0; }
+  label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 3px; }
+  textarea { min-height: 320px; font: 14px/1.6 ui-monospace, Menlo, monospace; resize: vertical; }
+  .empty { color: var(--muted); padding: 40px 28px; }
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg);
+    padding: 8px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: .95; }
+  dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--ink); max-width: 520px; width: calc(100% - 32px); }
+  dialog::backdrop { background: rgba(0,0,0,.4); }
+  .problems li { margin: 4px 0; }
+  @media (max-width: 760px) {
+    main { grid-template-columns: 1fr; height: auto; }
+    aside { border-right: 0; max-height: 45vh; border-bottom: 1px solid var(--line); }
+    section.detail { padding: 18px 16px 60px; }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🧠 Brain</h1>
+  <span id="statusPill" class="pill" title="Connector health"><span class="dot" id="dot"></span><span id="statusText">…</span></span>
+  <span class="spacer"></span>
+  <button id="newBtn" class="primary">New note</button>
+  <button id="tokenBtn" title="Sign out">Sign out</button>
+</header>
+<main>
+  <aside>
+    <div class="search">
+      <input id="q" type="search" placeholder="Search your brain…" autocomplete="off" aria-label="Search">
+      <div class="filters">
+        <select id="fKind" aria-label="Kind"><option value="">any kind</option>
+          <option>note</option><option>decision</option><option>fix</option><option>howto</option>
+          <option>reference</option><option>session</option><option>commits</option></select>
+        <select id="fScope" aria-label="Scope"><option value="">any scope</option></select>
+      </div>
+    </div>
+    <div id="list"></div>
+  </aside>
+  <section class="detail" id="detail"><div class="empty">Search above, or pick something from the list.</div></section>
+</main>
+
+<dialog id="tokenDlg">
+  <form method="dialog">
+    <h3 style="margin-top:0">Sign in</h3>
+    <p id="oidcRow" hidden><button type="button" id="oidcBtn" class="primary" style="width:100%">Sign in with Pocket ID</button></p>
+    <p style="font-size:12px;margin:0 0 8px"><a href="#" id="tokenToggle" style="color:var(--muted)">Use an access token instead</a></p>
+    <div id="tokenBox">
+    <p style="color:var(--muted);font-size:13px">Stored only in this browser's local storage and sent as a bearer token.</p>
+    <input id="tokenInput" type="password" placeholder="BRAIN_TOKEN" autocomplete="off">
+    <p style="text-align:right;margin-bottom:0"><button value="cancel">Cancel</button> <button id="tokenSave" value="ok" class="primary">Save</button></p>
+    </div>
+  </form>
+</dialog>
+<dialog id="statusDlg"><form method="dialog"><div id="statusBody"></div><p style="text-align:right"><button>Close</button></p></form></dialog>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const hl = (s) => esc(s).replace(/\[([^\]]+)\]/g, "<mark>$1</mark>");
+function mdInline(t) {
+  const codes = [];
+  t = t.replace(/`([^`\n]+)`/g, (_, c) => { codes.push(c); return "\u0000" + (codes.length - 1) + "\u0000"; });
+  t = esc(t)
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^*\w])\*([^*\n]+)\*(?!\w)/g, "$1<em>$2</em>")
+    .replace(/(^|[^\w])_([^_\n]+)_(?!\w)/g, "$1<em>$2</em>")
+    .replace(/~~([^~]+)~~/g, "<del>$1</del>");
+  return t.replace(/\u0000(\d+)\u0000/g, (_, i) => "<code>" + esc(codes[+i]) + "</code>");
+}
+function mdRender(src) {
+  const lines = String(src || "").replace(/\r\n?/g, "\n").split("\n");
+  const out = []; let i = 0;
+  const isTable = (k) => k + 1 < lines.length && /\|/.test(lines[k]) && /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(lines[k + 1]);
+  const cells = (l) => l.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+  while (i < lines.length) {
+    const l = lines[i];
+    let m;
+    if ((m = l.match(/^\s*```(.*)$/))) {
+      const buf = []; i++;
+      while (i < lines.length && !/^\s*```\s*$/.test(lines[i])) buf.push(lines[i++]);
+      i++; out.push("<pre><code>" + esc(buf.join("\n")) + "</code></pre>"); continue;
+    }
+    if ((m = l.match(/^(#{1,4})\s+(.*)$/))) { out.push(`<h${m[1].length}>${mdInline(m[2])}</h${m[1].length}>`); i++; continue; }
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)) { out.push("<hr>"); i++; continue; }
+    if (isTable(i)) {
+      const head = cells(lines[i]); i += 2; const rows = [];
+      while (i < lines.length && /\|/.test(lines[i]) && lines[i].trim()) rows.push(cells(lines[i++]));
+      out.push("<table><thead><tr>" + head.map((c) => `<th>${mdInline(c)}</th>`).join("") + "</tr></thead><tbody>" +
+        rows.map((r) => "<tr>" + r.map((c) => `<td>${mdInline(c)}</td>`).join("") + "</tr>").join("") + "</tbody></table>"); continue;
+    }
+    if (/^\s*>/.test(l)) {
+      const buf = [];
+      while (i < lines.length && /^\s*>/.test(lines[i])) buf.push(lines[i++].replace(/^\s*>\s?/, ""));
+      out.push("<blockquote>" + mdInline(buf.join(" ")) + "</blockquote>"); continue;
+    }
+    if (/^\s*([-*+]|\d+\.)\s+/.test(l)) {
+      const ordered = /^\s*\d+\./.test(l); const items = [];
+      while (i < lines.length && /^\s*([-*+]|\d+\.)\s+/.test(lines[i]))
+        items.push(mdInline(lines[i++].replace(/^\s*([-*+]|\d+\.)\s+/, "").replace(/^\[( |x)\]\s*/i, (_, c) => (c === " " ? "☐ " : "☑ "))));
+      const tag = ordered ? "ol" : "ul"; out.push(`<${tag}>` + items.map((x) => `<li>${x}</li>`).join("") + `</${tag}>`); continue;
+    }
+    if (!l.trim()) { i++; continue; }
+    const buf = [];
+    while (i < lines.length && lines[i].trim() && !/^(\s*```|#{1,4}\s|\s*>|\s*([-*+]|\d+\.)\s+)/.test(lines[i]) && !isTable(i)) buf.push(lines[i++]);
+    if (!buf.length) { buf.push(lines[i++]); }
+    out.push("<p>" + mdInline(buf.join("\n")).replace(/\n/g, "<br>") + "</p>");
+  }
+  return out.join("\n");
+}
+const store = {
+  get: (k) => { try { return localStorage.getItem(k) || ""; } catch { return ""; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
+};
+let current = null, timer = null, mode = "view";
+
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 2200); }
+function ago(days) { if (days == null) return ""; if (days < 1) return "today"; if (days < 30) return Math.round(days) + "d ago";
+  if (days < 365) return Math.round(days / 30) + "mo ago"; return (days / 365).toFixed(1) + "y ago"; }
+function ageOf(ts) { return ago((Date.now() / 1000 - ts) / 86400); }
+
+// ---- Pocket ID sign-in (authorization code + PKCE, public client) ----
+let oidc = null;
+const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const rand = (n) => b64u(crypto.getRandomValues(new Uint8Array(n)));
+async function loadOidc() {
+  try { const r = await fetch("/ui-config"); oidc = (await r.json()).oidc || null; } catch { oidc = null; }
+  $("oidcRow").hidden = !oidc;
+  $("tokenBox").hidden = !!oidc; $("tokenToggle").parentElement.hidden = !oidc;
+}
+async function startLogin() {
+  if (!oidc) return;
+  const verifier = rand(48), state = rand(16);
+  const challenge = b64u(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
+  sessionStorage.setItem("oidc_verifier", verifier); sessionStorage.setItem("oidc_state", state);
+  const q = new URLSearchParams({ response_type: "code", client_id: oidc.client_id, redirect_uri: location.origin + "/",
+    scope: "openid profile", state, code_challenge: challenge, code_challenge_method: "S256" });
+  location.href = oidc.issuer + "/authorize?" + q;
+}
+async function finishLogin() {
+  const p = new URLSearchParams(location.search);
+  if (!p.has("code") && !p.has("error")) return;
+  history.replaceState(null, "", location.pathname);
+  const verifier = sessionStorage.getItem("oidc_verifier"), state = sessionStorage.getItem("oidc_state");
+  sessionStorage.removeItem("oidc_verifier"); sessionStorage.removeItem("oidc_state");
+  if (p.has("error") || !p.get("code") || p.get("state") !== state || !verifier) { toast("Sign-in failed"); return; }
+  await loadOidc();
+  if (!oidc) return;
+  try {
+    const res = await fetch(oidc.issuer + "/api/oidc/token", { method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ grant_type: "authorization_code", code: p.get("code"), code_verifier: verifier,
+        client_id: oidc.client_id, redirect_uri: location.origin + "/" }) });
+    const data = await res.json();
+    if (!res.ok || !data.access_token) throw new Error(data.error_description || data.error || res.statusText);
+    store.set("brain_token", data.access_token);
+  } catch (e) { toast("Sign-in failed: " + e.message); }
+}
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { ...opts, headers: { "Authorization": "Bearer " + store.get("brain_token"),
+    ...(opts.body ? { "Content-Type": "application/json" } : {}) } });
+  if (res.status === 401) { store.set("brain_token", ""); askToken(); throw new Error("unauthorized"); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+function askToken() { $("tokenInput").value = ""; if (!$("tokenDlg").open) $("tokenDlg").showModal(); }
+$("tokenToggle").onclick = (e) => { e.preventDefault(); $("tokenBox").hidden = false; $("tokenToggle").parentElement.hidden = true; };
+function signOut() { store.set("brain_token", ""); try { localStorage.removeItem("brain_token"); } catch {} location.reload(); }
+$("tokenBtn").onclick = signOut;
+$("oidcBtn").onclick = startLogin;
+$("tokenDlg").addEventListener("close", () => {
+  if ($("tokenDlg").returnValue === "ok" && $("tokenInput").value) { store.set("brain_token", $("tokenInput").value.trim()); boot(); }
+});
+
+function renderList(items, searching) {
+  const el = $("list");
+  if (!items.length) { el.innerHTML = `<div class="empty">${searching ? "No matches." : "Nothing here yet — add a note."}</div>`; return; }
+  el.innerHTML = items.map((h) => `
+    <div class="row${current && current.id === h.id ? " sel" : ""}" data-id="${esc(h.id)}" tabindex="0">
+      <div class="t">${h.pinned ? "📌 " : ""}${esc(h.title || "(untitled)")}</div>
+      <div class="s">${h.snippet ? hl(h.snippet) : esc(h.summary)}</div>
+      <div class="meta"><span class="chip">${esc(h.kind)}</span><span class="chip">${esc(h.source)}</span>
+        <span>${ago(h.age_days ?? (Date.now() / 1000 - h.created_at) / 86400)}</span></div>
+    </div>`).join("");
+  el.querySelectorAll(".row").forEach((r) => {
+    r.onclick = () => openItem(r.dataset.id);
+    r.onkeydown = (e) => { if (e.key === "Enter") openItem(r.dataset.id); };
+  });
+}
+
+async function refresh() {
+  const q = $("q").value.trim(), kind = $("fKind").value, scope = $("fScope").value;
+  const p = new URLSearchParams();
+  if (kind) p.set("kind", kind); if (scope) p.set("scope", scope);
+  try {
+    if (q) { p.set("q", q); p.set("limit", "25"); renderList(await api("/api/search?" + p), true); }
+    else { p.set("limit", "40"); renderList(await api("/api/recent?" + p), false); }
+  } catch (e) { if (e.message !== "unauthorized") toast(e.message); }
+}
+$("q").addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(refresh, 180); });
+$("fKind").onchange = $("fScope").onchange = refresh;
+
+async function openItem(id) {
+  try {
+    current = await api("/api/items/" + encodeURIComponent(id)); mode = "view"; renderDetail(); refreshSel();
+    if (window.innerWidth <= 760) $("detail").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (e) { toast(e.message); }
+}
+function refreshSel() { document.querySelectorAll(".row").forEach((r) => r.classList.toggle("sel", current && r.dataset.id === current.id)); }
+
+function renderDetail() {
+  const d = $("detail"), it = current;
+  if (!it) { d.innerHTML = `<div class="empty">Search above, or pick something from the list.</div>`; return; }
+  if (mode === "edit") {
+    d.innerHTML = `
+      <label>Title</label><input id="eTitle" value="${esc(it.title)}">
+      <div class="grid">
+        <div><label>Kind</label><input id="eKind" value="${esc(it.kind)}"></div>
+        <div><label>Tags (comma separated)</label><input id="eTags" value="${esc(it.tags)}"></div>
+        <div><label>Scope</label><input id="eScope" value="${esc(it.scope)}"></div>
+      </div>
+      <label>Body (markdown)</label><textarea id="eBody">${esc(it.body)}</textarea>
+      <div class="bar"><button class="primary" id="saveBtn">Save</button><button id="cancelBtn">Cancel</button></div>`;
+    $("cancelBtn").onclick = () => { mode = "view"; if (!it.id) current = null; renderDetail(); };
+    $("saveBtn").onclick = save;
+    $("eTitle").focus();
+    return;
+  }
+  d.innerHTML = `
+    <h2>${it.pinned ? "📌 " : ""}${esc(it.title || "(untitled)")}</h2>
+    <div class="meta"><span class="chip">${esc(it.kind)}</span><span class="chip">${esc(it.source)}</span>
+      <span class="chip">${esc(it.scope)}</span>${it.tags ? `<span class="chip">${esc(it.tags)}</span>` : ""}
+      <span>${ageOf(it.created_at)} · ${it.access_count} reads · ${esc(it.status)}</span></div>
+    <div class="bar">
+      <button id="editBtn" class="primary">Edit</button><button id="pinBtn">${it.pinned ? "Unpin" : "Pin"}</button>
+      <button id="appendBtn">Append…</button><button id="archBtn" class="danger">Archive</button></div>
+    ${it.summary ? `<div class="block"><h3>Summary</h3><pre>${esc(it.summary)}</pre></div>` : ""}
+    ${it.atoms ? `<div class="block"><h3>Atoms</h3><pre>${esc(it.atoms)}</pre></div>` : ""}
+    ${it.questions ? `<div class="block"><h3>Findable by</h3><pre>${esc(it.questions)}</pre></div>` : ""}
+    <h3 style="margin:18px 0 6px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Full text</h3>
+    <div class="md">${mdRender(it.body)}</div>`;
+  $("editBtn").onclick = () => { mode = "edit"; renderDetail(); };
+  $("pinBtn").onclick = async () => { await api("/api/items/" + it.id, { method: "PUT", body: JSON.stringify({ pinned: !it.pinned }) });
+    await openItem(it.id); refresh(); };
+  $("appendBtn").onclick = async () => { const t = prompt("Text to append:"); if (!t) return;
+    await api(`/api/items/${it.id}/append`, { method: "POST", body: JSON.stringify({ text: t }) }); toast("Appended"); await openItem(it.id); };
+  $("archBtn").onclick = async () => { if (!confirm("Archive this item? It leaves search but is kept.")) return;
+    await api("/api/items/" + it.id, { method: "DELETE" }); current = null; renderDetail(); refresh(); toast("Archived"); };
+}
+
+async function save() {
+  const body = { title: $("eTitle").value, body: $("eBody").value, kind: $("eKind").value || "note",
+    tags: $("eTags").value, scope: $("eScope").value || "personal" };
+  try {
+    if (current.id) { await api("/api/items/" + current.id, { method: "PUT", body: JSON.stringify(body) }); await openItem(current.id); }
+    else { const r = await api("/api/items", { method: "POST", body: JSON.stringify({ ...body, source: "ui" }) }); await openItem(r.id); }
+    toast("Saved"); refresh();
+  } catch (e) { toast(e.message); }
+}
+$("newBtn").onclick = () => { current = { id: "", title: "", body: "", kind: "note", tags: "", scope: "personal" }; mode = "edit"; renderDetail(); };
+
+async function loadStatus() {
+  try {
+    const s = await api("/api/status");
+    const bad = s.health.problems.length, st = s.stats;
+    $("dot").className = "dot " + (bad ? "bad" : "ok");
+    $("statusText").textContent = `${st.active} items${bad ? ` · ${bad} problem${bad > 1 ? "s" : ""}` : ""}`;
+    const scopes = Object.keys(st.by_scope), sel = $("fScope"), keep = sel.value;
+    sel.innerHTML = `<option value="">any scope</option>` + scopes.map((x) => `<option>${esc(x)}</option>`).join("");
+    sel.value = keep;
+    $("statusPill").onclick = () => {
+      $("statusBody").innerHTML = `<h3 style="margin-top:0">Status</h3>
+        <p>${st.active} active · ${st.archived} archived · ${st.unenriched} awaiting enrichment</p>
+        <p>${Object.entries(st.by_source).map(([k, v]) => `<span class="chip">${esc(k)}: ${v}</span>`).join(" ") || "No sources yet."}</p>
+        <h4>Connectors</h4>
+        ${s.health.problems.length ? `<ul class="problems">${s.health.problems.map((p) => `<li><b>${esc(p.connector)}</b>: ${esc(p.problem)}</li>`).join("")}</ul>` : "<p>All connectors healthy.</p>"}
+        <ul>${s.health.connectors.map((c) => `<li>${esc(c.connector)} — ran ${c.last_run_age_min} min ago (${c.last_count} new)</li>`).join("")}</ul>`;
+      $("statusDlg").showModal();
+    };
+  } catch (e) { if (e.message !== "unauthorized") { $("dot").className = "dot bad"; $("statusText").textContent = "offline"; } }
+}
+
+async function boot() { if (!store.get("brain_token")) { askToken(); return; } await loadStatus(); await refresh(); }
+(async () => { await loadOidc(); await finishLogin(); boot(); })();
+document.addEventListener("keydown", (e) => { if (e.key === "/" && document.activeElement.tagName !== "INPUT" &&
+  document.activeElement.tagName !== "TEXTAREA") { e.preventDefault(); $("q").focus(); } });
+</script>
+</body>
+</html>

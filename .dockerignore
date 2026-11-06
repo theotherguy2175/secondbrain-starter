@@ -1,0 +1,7 @@
+tests
+**/__pycache__
+*.db
+*.db-wal
+*.db-shm
+.pytest_cache
+.git

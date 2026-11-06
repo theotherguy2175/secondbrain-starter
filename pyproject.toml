@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "brain"
+version = "0.1.0"
+description = "Self-hosted second brain: SQLite/FTS5 store, MCP server, connectors"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=2.3,<3",
+    "starlette>=1.0",
+    "uvicorn>=0.30",
+    "pyyaml>=6",
+    "PyJWT[crypto]>=2.8",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+brain = "brain.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+brain = ["ui/*.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

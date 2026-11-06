@@ -1,0 +1,28 @@
+# Connectors that run ON YOUR DEVICE and push to the server:
+#   export BRAIN_URL=https://brain.example.com BRAIN_TOKEN=...
+#   brain push --config examples/device-connectors.yaml
+# Schedule it every 15 minutes (cron / launchd / systemd timer).
+connectors:
+  - name: claude-sessions
+    type: claude_sessions
+    interval_minutes: 15
+    scope: personal            # use a different scope for work machines (and a different server!)
+    options:
+      path: ~/.claude/projects
+
+  - name: git
+    type: git_log
+    interval_minutes: 15
+    scope: personal
+    options:
+      repos:
+        - ~/code/homelab
+        - ~/code/my-app
+      initial_days: 90
+
+  - name: vault
+    type: markdown_dir
+    interval_minutes: 15
+    scope: personal
+    options:
+      path: ~/Notes

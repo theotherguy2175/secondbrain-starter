@@ -1,0 +1,131 @@
+# brain: self-hosted second brain (SQLite/FTS5 + MCP). Auth: bearer token (secret brain-secrets).
+#   - One pod, two containers (server + worker) sharing the PVC: that is what makes SQLite WAL safe.
+#   - Recreate: RWO PVC + SQLite is a single writer. Never scale past 1 replica.
+#   - Secrets live out of band: see secret.example.yaml.
+#   - Replace REGISTRY/brain:latest with the image you built (see README).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: brain-config
+  namespace: brain
+data:
+  connectors.yaml: |
+    enrich_batch: 50
+    maintenance:
+      backup_dir: /data/backups
+      backup_keep: 7
+      prune_sources: [claude-sessions, git]
+      archive_after_days: 365
+    connectors:
+      # Drop-folder for markdown files copied into the data volume (created by the init container).
+      - name: inbox
+        type: markdown_dir
+        interval_minutes: 5
+        scope: personal
+        options:
+          path: /data/inbox
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-brain-data
+  namespace: brain
+spec:
+  accessModes: ["ReadWriteOnce"]
+  # storageClassName: local-path   # set to your cluster's block/local storage class (NOT NFS/SMB)
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: brain
+  namespace: brain
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: {app: brain}
+  template:
+    metadata:
+      labels: {app: brain}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: {type: RuntimeDefault}
+      initContainers:
+        - name: init-dirs
+          image: REGISTRY/brain:latest
+          command: ["sh", "-c", "mkdir -p /data/inbox /data/backups"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: ["ALL"]}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+      containers:
+        - name: server
+          image: REGISTRY/brain:latest
+          args: ["brain", "serve", "--host", "0.0.0.0", "--port", "8080", "--config", "/config/connectors.yaml"]
+          ports:
+            - {name: http, containerPort: 8080}
+          env:
+            - {name: BRAIN_DB, value: /data/brain.db}
+            - {name: BRAIN_CONFIG, value: /config/connectors.yaml}
+            # Optional hardening once you have a hostname: pin Host/Origin.
+            # - {name: BRAIN_ALLOWED_HOSTS, value: "brain.example.com"}
+            # Optional OAuth (needed for claude.ai web/mobile): see README "Connect claude.ai".
+            - name: BRAIN_TOKEN
+              valueFrom: {secretKeyRef: {name: brain-secrets, key: BRAIN_TOKEN}}
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {memory: 512Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: ["ALL"]}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: config, mountPath: /config, readOnly: true}
+        - name: worker
+          image: REGISTRY/brain:latest
+          args: ["brain", "worker", "--config", "/config/connectors.yaml"]
+          env:
+            - {name: BRAIN_DB, value: /data/brain.db}
+            - {name: BRAIN_CONFIG, value: /config/connectors.yaml}
+            - {name: BRAIN_BACKUP_DIR, value: /data/backups}
+            # LLM enrichment is OFF (heuristic only; nothing leaves the cluster). See README to enable.
+          resources:
+            requests: {cpu: 20m, memory: 64Mi}
+            limits: {memory: 512Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: ["ALL"]}
+          volumeMounts:
+            - {name: data, mountPath: /data}
+            - {name: config, mountPath: /config, readOnly: true}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: pvc-brain-data}
+        - name: config
+          configMap: {name: brain-config}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-brain
+  namespace: brain
+spec:
+  selector: {app: brain}
+  ports:
+    - {name: http, protocol: TCP, port: 80, targetPort: http}

@@ -1,0 +1,27 @@
+# One command:  cp .env.example .env  (set BRAIN_TOKEN)  &&  docker compose up -d --build
+# UI + API at http://localhost:8080 . For internet access put it behind HTTPS (Caddy/Traefik/Cloudflare Tunnel).
+services:
+  server:
+    build: .
+    command: ["brain", "serve", "--host", "0.0.0.0", "--port", "8080", "--config", "/config/connectors.yaml"]
+    environment:
+      BRAIN_DB: /data/brain.db
+      BRAIN_TOKEN: ${BRAIN_TOKEN:?set BRAIN_TOKEN in .env}
+      BRAIN_BACKUP_DIR: /data/backups
+    ports: ["${BRAIN_PORT:-8080}:8080"]
+    volumes:
+      - brain-data:/data
+      - ./examples/compose-connectors.yaml:/config/connectors.yaml:ro
+    restart: unless-stopped
+  worker:
+    build: .
+    command: ["brain", "worker", "--config", "/config/connectors.yaml"]
+    environment:
+      BRAIN_DB: /data/brain.db
+      BRAIN_BACKUP_DIR: /data/backups
+    volumes:
+      - brain-data:/data
+      - ./examples/compose-connectors.yaml:/config/connectors.yaml:ro
+    restart: unless-stopped
+volumes:
+  brain-data:

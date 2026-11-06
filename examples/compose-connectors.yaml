@@ -1,0 +1,14 @@
+enrich_batch: 50
+maintenance:
+  backup_dir: /data/backups
+  backup_keep: 7
+  prune_sources: [claude-sessions, git]
+  archive_after_days: 365
+connectors:
+  # Drop .md files into the volume's /data/inbox and they are ingested every 5 minutes.
+  - name: inbox
+    type: markdown_dir
+    interval_minutes: 5
+    scope: personal
+    options:
+      path: /data/inbox
