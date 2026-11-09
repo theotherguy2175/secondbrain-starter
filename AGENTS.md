@@ -44,7 +44,7 @@ docker compose up -d --build                                             # the t
 
 ## Common tasks
 
-- **Add a connector:** subclass `Connector` in `connectors.py` (`type = "..."`, implement `collect(cursor)`, set `self.cursor`), register it in the type map near the bottom, redact text, add a test in `tests/test_pipeline.py`.
+- **Add a connector:** subclass `Connector` in `connectors.py` (`type = "..."`, implement `collect(cursor)`, set `self.cursor`), add it to the `REGISTRY` tuple near the bottom, redact text, add a test in `tests/test_pipeline.py`.
 - **Add an MCP tool or REST route:** edit `server.py` (tools in `build_mcp`, routes in the `Route(...)` list), keep the response small (agents pay per token), add a test in `tests/test_server.py`. Update `MCP_INSTRUCTIONS` if agent behavior should change.
 - **Change search ranking:** `store.search`; verify with `tests/test_store.py`.
 - **Add an enricher:** implement `enrich(item) -> {"summary","questions","atoms"}` in `enrich.py` and wire it in `get_enricher` (selected by `BRAIN_ENRICH`).
